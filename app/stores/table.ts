@@ -29,6 +29,7 @@ export const useTableStore = defineStore("table", () => {
   };
 
   return {
+    revealedCount,
     tableCards,
     initTable,
     revealNext,

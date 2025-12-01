@@ -7,6 +7,12 @@
           <img class="user__cards" :src="card.imgSrc" :alt="`${card.value}`" />
         </div>
       </div>
+      <div class="user__money">
+        {{ player.money }}
+      </div>
+      <div v-if="player.currentBet !== 0" class="user__bet">
+        {{ player.currentBet }}
+      </div>
     </div>
   </div>
 </template>
@@ -34,5 +40,13 @@ const otherPlayers = computed(() =>
 }
 .user__cards {
   @apply w-14;
+}
+
+.user__money {
+  @apply text-center text-[--CTA] justify-start text-2xl font-normal;
+}
+
+.user__bet {
+  @apply text-center text-[--secondery-text] justify-start text-base font-normal;
 }
 </style>

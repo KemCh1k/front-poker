@@ -13,22 +13,19 @@ import { usePlayerStore } from "~/stores/players";
 import type { ICard } from "~/data/cards";
 import { useTableStore } from "~/stores/table";
 import PokerUser from "~/components/pokerUser.vue";
+import { useGameStore } from "~/stores/game";
 
 const deck = useDeckStore();
 const players = usePlayerStore();
 const table = useTableStore();
-
+const game = useGameStore();
 onMounted(() => {
-  deck.initDeck();
-  deck.shuffle();
-  players.initPlayers();
-  players.delCards();
-  table.initTable();
+  game.startGame();
 });
 </script>
 
 <style scoped>
 .poker {
-  @apply w-full h-screen inline-flex flex-col  items-center gap-24 justify-between pb-8;
+  @apply w-full h-screen inline-flex flex-col  items-center justify-between pb-8;
 }
 </style>

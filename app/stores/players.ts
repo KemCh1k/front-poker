@@ -12,6 +12,8 @@ export const usePlayerStore = defineStore("players", () => {
       id: i + 1,
       cards: [],
       folded: false,
+      money: 1000,
+      currentBet: 0,
     }));
   };
 
