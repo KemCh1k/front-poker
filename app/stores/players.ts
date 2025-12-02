@@ -1,7 +1,8 @@
 import { defineStore } from "pinia";
+import { toRaw } from "vue";
 import type { IUser } from "~/data/user";
 import { useDeckStore } from "~/stores/deck";
-import { CARD_TYPE } from "~/data/cards";
+import { CARD_TYPE, type ICard, type ICardUser } from "~/data/cards";
 
 export const usePlayerStore = defineStore("players", () => {
   const players = ref<IUser[]>([]);
@@ -22,11 +23,22 @@ export const usePlayerStore = defineStore("players", () => {
       for (const player of players.value) {
         const card = deck.cards.shift();
         if (!card) continue;
-        card.userId = player.id;
-        card.status = CARD_TYPE.PLAYER;
-        player.cards.push(card);
+        const cardUser = defineCardToUser(card, player.id, CARD_TYPE.PLAYER);
+        player.cards.push(cardUser);
       }
     }
+  };
+
+  const defineCardToUser = (
+    card: ICard,
+    userId: number,
+    status: CARD_TYPE,
+  ): ICardUser => {
+    const rawCard = toRaw(card);
+    const newCard = structuredClone(rawCard);
+    newCard.userId = userId;
+    newCard.status = status;
+    return newCard as ICardUser;
   };
 
   return {

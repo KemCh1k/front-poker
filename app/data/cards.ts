@@ -10,3 +10,7 @@ export interface ICard {
   imgSrc: string;
   status: CARD_TYPE;
 }
+
+export interface ICardUser extends ICard {
+  userId: number;
+}

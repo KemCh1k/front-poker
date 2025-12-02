@@ -1,8 +1,8 @@
-import type { ICard } from "~/data/cards";
+import type { ICardUser } from "~/data/cards";
 
 export interface IUser {
   id: number;
-  cards: ICard[];
+  cards: ICardUser[];
   folded: boolean;
   money: number;
   currentBet: number;

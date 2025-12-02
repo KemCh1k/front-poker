@@ -11,13 +11,30 @@
         <div class="player__money">
           {{ playerOwner.money }}
         </div>
-        <div v-if="playerOwner.currentBet !== 0" class="player__bet">
+        <div class="player__bet">
           {{ playerOwner.currentBet }}
         </div>
       </div>
     </div>
     <button @click="game.nextStep()">next</button>
     <button @click="game.reset()">reset</button>
+    <div class="bet__buttons">
+      <!- Пресеты ставок -->
+      <button class="preset-btn" @click="game.applyBetPreset('SMALL')">
+        50
+      </button>
+      <button class="preset-btn" @click="game.applyBetPreset('MEDIUM')">
+        100
+      </button>
+      <button class="preset-btn" @click="game.applyBetPreset('BIG')">
+        200
+      </button>
+      <button class="preset-btn" @click="game.applyBetPreset('HALF')">½</button>
+      <button class="preset-btn" @click="game.applyBetPreset('MAX')">
+        ALL-IN
+      </button>
+      <button class="preset-btn" @click="game.fold()">fold</button>
+    </div>
   </div>
 </template>
 
@@ -66,5 +83,17 @@ const playerOwner = computed(() =>
 
 .player__bet {
   @apply text-center text-[--secondery-text] justify-start text-base font-normal;
+}
+
+.bet__buttons {
+  @apply inline-flex flex-col gap-2;
+}
+
+.preset-btn {
+  @apply px-4 py-2 text-lg font-bold rounded-xl bg-[--CTA] text-white;
+}
+
+.preset-btn.raise {
+  @apply bg-yellow-600;
 }
 </style>

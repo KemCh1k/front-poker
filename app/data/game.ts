@@ -4,3 +4,9 @@ export enum GAME_TYPE {
   REVEAL = "REVEAL",
   FINISHED = "FINISHED",
 }
+
+export enum BET_GAME_TYPE {
+  PREVIOUS = "PREVIOUS",
+  BETTING = "BETTING",
+  ENDING = "ENDING",
+}
