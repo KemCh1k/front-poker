@@ -1,8 +1,22 @@
 <template>
   <div class="poker__user">
-    <div v-for="player in otherPlayers" :key="player.id">
+    <div
+      class="flex items-center flex-col"
+      v-for="player in otherPlayers"
+      :key="player.id"
+    >
       <div class="user__avatarCards">
-        <div class="user__avatar">{{ player.id }}</div>
+        <div
+          class="user__avatar"
+          :class="[
+            player.index === game.currentPlayerIndex && !player.folded
+              ? 'activePlayer'
+              : '',
+            player.id === game.winnerId ? `userWinner` : ``,
+          ]"
+        >
+          {{ player.id }}
+        </div>
         <div v-for="card in player.cards" :key="card.userId">
           <img class="user__cards" :src="card.imgSrc" :alt="`${card.value}`" />
         </div>
@@ -10,7 +24,9 @@
       <div class="user__money">
         {{ player.money }}
       </div>
-      <div v-if="player.currentBet !== 0" class="user__bet">
+      <div
+        :class="[player.currentBet !== 0 ? `user__bet--active` : `user__bet`]"
+      >
         {{ player.currentBet }}
       </div>
     </div>
@@ -22,9 +38,12 @@ import { computed } from "vue";
 import { usePlayerStore } from "~/stores/players";
 
 const players = usePlayerStore();
+const game = useGameStore();
 
 const otherPlayers = computed(() =>
-  players.players.filter((player) => player.id !== 1),
+  players.players
+    .map((player, i) => ({ ...player, index: i }))
+    .filter((player) => player.id !== 1),
 );
 </script>
 
@@ -47,6 +66,17 @@ const otherPlayers = computed(() =>
 }
 
 .user__bet {
-  @apply text-center text-[--secondery-text] justify-start text-base font-normal;
+  @apply text-center items-center text-[--main-text] text-base font-normal rounded-full  min-w-6 min-h-6 opacity-0;
+  &--active {
+    @apply text-center flex justify-center items-center text-[--main-text] text-base font-normal rounded-full  min-w-8 min-h-8 bg-[--secondery];
+  }
+}
+
+.activePlayer {
+  @apply ring-1 ring-[--CTA] rounded-2xl transition-all scale-105;
+}
+
+.userWinner {
+  @apply ring-1 ring-[--CTA] rounded-2xl transition-all scale-105;
 }
 </style>

@@ -3,6 +3,7 @@ export enum GAME_TYPE {
   DEAL = "DEAL",
   REVEAL = "REVEAL",
   FINISHED = "FINISHED",
+  FINISHEDROUND = "FINISHEDROUND",
 }
 
 export enum BET_GAME_TYPE {
