@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import type { ITable } from "~/data/table";
 import { CARD_TYPE, type ICard } from "~/data/cards";
 
 export const useTableStore = defineStore("table", () => {

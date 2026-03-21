@@ -10,7 +10,8 @@ export const useGameStore = defineStore("game", () => {
   const table = useTableStore();
 
   const gameStatus = ref<GAME_TYPE>(GAME_TYPE.INIT);
-
+  const lastAggressorIndex = ref<number | null>(null);
+  const actedPlayers = ref<Set<number>>(new Set());
   // Старт игры
   const startGame = () => {
     gameStatus.value = GAME_TYPE.DEAL;
@@ -25,6 +26,8 @@ export const useGameStore = defineStore("game", () => {
     currentBetToMatch.value = 0;
     pot.value = 0;
     raisesInRound.value = 0;
+    lastAggressorIndex.value = null;
+    actedPlayers.value = new Set();
 
     for (const player of players.players) {
       player.currentBet = 0;
@@ -49,6 +52,8 @@ export const useGameStore = defineStore("game", () => {
     currentBetToMatch.value = 0;
     pot.value = 0;
     raisesInRound.value = 0;
+    lastAggressorIndex.value = null;
+    actedPlayers.value = new Set();
 
     for (const player of players.players) {
       player.currentBet = 0;
@@ -84,34 +89,30 @@ export const useGameStore = defineStore("game", () => {
         player.currentBet === currentBetToMatch.value || player.money === 0,
     );
 
-    // Также проверяем, что текущий игрок, которому передали ход, не является тем, кто сделал последнюю ставку.
-    const lastBetterIndex = players.players.findIndex(
-      (p) => p.currentBet === currentBetToMatch.value && p.money > 0,
+    const allActed = activePlayers.every(
+      (p) => actedPlayers.value.has(p.id) || p.money === 0,
     );
-    const isBackToLastBetter = lastBetterIndex === currentPlayerIndex.value;
 
-    // Если все уравняли И мы вернулись к игроку, который сделал последнюю ставку (или всем, кто чекал), завершаем раунд.
-    if (allMatched && isBackToLastBetter) {
+    if (activePlayers.every((p) => p.money === 0)) {
+      endRound();
+      return true;
+    }
+
+    // Также проверяем, что текущий игрок, которому передали ход, не является тем, кто сделал последнюю ставку.
+    // const isBackToLastBetter =
+    //   lastAggressorIndex.value !== null &&
+    //   lastAggressorIndex.value === currentPlayerIndex.value;
+
+    // если был рейз — ждем возврата к агрессору
+    if (currentBetToMatch.value > 0 && allMatched) {
       endBettingRound();
       return true;
     }
 
-    if (allMatched || activePlayers.every((p) => p.money === 0)) {
+    // если рейзов не было — нужен полный круг (все походили)
+    if (lastAggressorIndex.value === null && allActed) {
       endBettingRound();
-    }
-    if (allMatched) {
-      endRound();
-    }
-
-    if (allMatched && activePlayers.every((p) => p.money === 0)) {
-      endRound();
-    }
-
-    if (activePlayers.every((p) => p.money === 0)) {
-      gameStatus.value = GAME_TYPE.FINISHED;
-      table.revealedCount = 5;
-      determineWinner();
-      endGame();
+      return true;
     }
 
     return false;
@@ -124,11 +125,31 @@ export const useGameStore = defineStore("game", () => {
    *
    * @function
    */
+
+  const getNextActivePlayerIndex = (startIndex = 0) => {
+    const totalPlayers = players.players.length;
+
+    for (let i = 0; i < totalPlayers; i++) {
+      const index = (startIndex + i) % totalPlayers;
+      const p = players.players[index];
+
+      if (!p) continue;
+
+      if (!p.folded && p.money > 0) {
+        return index;
+      }
+    }
+
+    return 0;
+  };
+
   const nextStep = () => {
     if (table.revealedCount < table.tableCards.length) {
       table.revealNext();
-      currentPlayerIndex.value = activeFirstPlayerIndex.value;
+      currentPlayerIndex.value = getNextActivePlayerIndex();
       currentBetToMatch.value = 0;
+      lastAggressorIndex.value = null;
+      actedPlayers.value = new Set();
     } else {
       endRound();
     }
@@ -195,9 +216,14 @@ export const useGameStore = defineStore("game", () => {
   const pot = ref(0);
   const currentBetToMatch = ref(0);
   const currentPlayerIndex = ref(0);
-  const limitBet = ref(1000);
+  const limitBet = ref(0);
   const raisesInRound = ref(0);
-  const activeFirstPlayerIndex = ref(0);
+
+  const proceed = () => {
+    if (!checkForEndOfBettingRound()) {
+      nextPlayer();
+    }
+  };
 
   /**
    * Игрок делает ставку:
@@ -211,33 +237,13 @@ export const useGameStore = defineStore("game", () => {
    */
 
   const bet = (amount: number) => {
-    // const player = players.players[currentPlayerIndex.value];
-    // if (!player || player.folded) return;
-    //
-    // if (amount > player.money) {
-    //   amount = player.money;
-    // }
-    // player.money -= amount;
-    // player.currentBet += amount;
-    //
-    // pot.value += amount;
-    //
-    // currentBetToMatch.value = Math.max(
-    //   currentBetToMatch.value,
-    //   player.currentBet,
-    // );
-    //
-    // if (player.currentBet < currentBetToMatch.value && player.money === 0) {
-    //   nextPlayer();
-    // }
-    //
-    // nextPlayer();
-
     const player = players.players[currentPlayerIndex.value];
     if (!player || player.folded) return;
 
+    const toCall = currentBetToMatch.value - player.currentBet;
+
     // Amount должен быть минимум текущей ставкой + мин. рейз (тут просто берем amount)
-    if (amount <= 0 || amount < currentBetToMatch.value) {
+    if (amount < toCall) {
       return;
     }
 
@@ -245,19 +251,22 @@ export const useGameStore = defineStore("game", () => {
     const betDifference = actualAmount - player.currentBet;
 
     if (betDifference <= 0) return; // Нельзя ставить меньше, чем уже поставлено
-
     player.money -= betDifference;
     player.currentBet += betDifference;
     pot.value += betDifference;
 
-    // Если это повышение ставки, обновляем currentBetToMatch и счетчик рейзов
-    if (player.currentBet > currentBetToMatch.value) {
-      currentBetToMatch.value = player.currentBet;
-      raisesInRound.value++;
-      // При рейзе круг ставок начинается заново для других игроков
+    const isRaise = player.currentBet > currentBetToMatch.value;
+    if (isRaise) {
+      lastAggressorIndex.value = currentPlayerIndex.value;
+      currentBetToMatch.value = Math.max(
+        currentBetToMatch.value,
+        player.currentBet,
+      );
+      actedPlayers.value = new Set([player.id]);
+    } else {
+      actedPlayers.value.add(player.id);
     }
-
-    nextPlayer();
+    proceed();
   };
 
   /**
@@ -267,18 +276,12 @@ export const useGameStore = defineStore("game", () => {
    */
   const check = () => {
     const player = players.players[currentPlayerIndex.value];
-    if (
-      currentBetToMatch.value === player?.currentBet &&
-      currentBetToMatch.value !== 0
-    ) {
-      nextPlayer();
-    }
+    if (!player) return;
 
-    // const player = players.players[currentPlayerIndex.value];
-    // // Чек возможен только если игроку не нужно ничего доставлять
-    // if (currentBetToMatch.value === player?.currentBet) {
-    //   nextPlayer();
-    // }
+    if (currentBetToMatch.value === player.currentBet) {
+      actedPlayers.value.add(player.id);
+      proceed();
+    }
   };
 
   /**
@@ -291,24 +294,6 @@ export const useGameStore = defineStore("game", () => {
    * @function
    */
   const call = () => {
-    // const player = players.players[currentPlayerIndex.value];
-    // if (!player || player.folded) return;
-    //
-    // if (currentBetToMatch.value === 0) {
-    //   return;
-    // }
-    //
-    // const diff = currentBetToMatch.value - player.currentBet;
-    // if (diff <= 0) return nextPlayer();
-    //
-    // const amount = Math.min(diff, player.money);
-    //
-    // player.money -= amount;
-    // player.currentBet += amount;
-    // pot.value += amount;
-    // nextPlayer();
-    // console.log(player);
-
     const player = players.players[currentPlayerIndex.value];
     if (!player || player.folded) return;
 
@@ -323,7 +308,8 @@ export const useGameStore = defineStore("game", () => {
     pot.value += amountToCall;
 
     // При колле мы просто передаем ход дальше, не обновляя currentBetToMatch
-    nextPlayer();
+    actedPlayers.value.add(player.id);
+    proceed();
   };
 
   /**
@@ -336,23 +322,8 @@ export const useGameStore = defineStore("game", () => {
     if (!player) return;
 
     player.folded = true;
-    nextPlayer();
-
-    // const player = players.players[currentPlayerIndex.value];
-    // if (!player) return;
-    //
-    // player.folded = true;
-
-    // // При фолде сразу проверяем, не остался ли единственный победитель
-    // const activePlayers = players.players.filter((p) => !p.folded);
-    // if (activePlayers.length <= 1) {
-    //   // Если только один игрок остался, завершаем раунд и переходим к раздаче банка
-    //   endRound(); // Сбрасывает ставки
-    //   // Определяем победителя немедленно, так как остался 1 игрок
-    //   determineWinner();
-    // } else {
-    //   nextPlayer();
-    // }
+    actedPlayers.value.add(player.id);
+    proceed();
   };
 
   /**
@@ -363,67 +334,35 @@ export const useGameStore = defineStore("game", () => {
    *
    * @function
    */
-  const nextPlayer = async () => {
-    // let next = currentPlayerIndex.value;
-    //
-    // const player = players.players[currentPlayerIndex.value];
-    //
-    // if (players.players.filter((player) => !player.folded).length === 1) {
-    //   endBettingRound();
-    //   endRound();
-    //   return;
-    // }
-    //
-    // if (currentBetToMatch.value !== player?.currentBet && !player?.folded) {
-    //   return;
-    // }
-    //
-    // do {
-    //   next = (next + 1) % players.players.length;
-    // } while (players.players[next]?.folded);
-    //
-    // currentPlayerIndex.value = next;
-    //
-    // const firstActive = players.players.findIndex((p) => !p.folded);
-    //
-    // activeFirstPlayerIndex.value = firstActive;
-    //
-    // const activePlayers = players.players.filter((p) => !p.folded);
-    // const allMatched = activePlayers.every(
-    //   (p) => p.currentBet === currentBetToMatch.value,
-    // );
-    //
-    // if (allMatched || activePlayers.every((p) => p.money === 0)) {
-    //   endBettingRound();
-    // }
-    //
-    // if (allMatched && activePlayers.every((p) => p.money === 0)) {
-    //   endRound();
-    // }
-    //
-    // if (
-    //   players.players[next]?.currentBet === currentBetToMatch.value &&
-    //   !allMatched
-    // ) {
-    //   endRound();
-    // }
-
+  const nextPlayer = () => {
     const totalPlayers = players.players.length;
     let nextIndex = currentPlayerIndex.value;
-    let attempts = 0;
 
-    // Ищем следующего игрока, который не сфолдил
-    do {
+    for (let i = 0; i < totalPlayers; i++) {
       nextIndex = (nextIndex + 1) % totalPlayers;
-      attempts++;
-      // Защита от бесконечного цикла, если все игроки, кроме одного, сфолдили (хотя это должно обрабатываться в checkForEndOfBettingRound)
-      if (attempts > totalPlayers) break;
-    } while (players.players[nextIndex]?.folded);
+      console.log(nextIndex);
 
-    currentPlayerIndex.value = nextIndex;
+      const p = players.players[nextIndex];
+      if (!p) continue;
 
-    // После смены игрока сразу проверяем, не пора ли закончить раунд ставок.
-    checkForEndOfBettingRound();
+      const needsAction = p.currentBet !== currentBetToMatch.value;
+      const isCheckRound = currentBetToMatch.value === 0;
+
+      const alreadyActed = actedPlayers.value.has(p.id);
+
+      if (
+        !p.folded &&
+        p.money > 0 &&
+        (needsAction || isCheckRound) &&
+        !alreadyActed
+      ) {
+        currentPlayerIndex.value = nextIndex;
+        return;
+      }
+    }
+    console.log("nextPlayer", nextIndex);
+
+    endBettingRound();
   };
 
   /**
@@ -435,31 +374,15 @@ export const useGameStore = defineStore("game", () => {
    */
   const endBettingRound = () => {
     bettingState.value = BET_GAME_TYPE.ENDING;
+
     players.players.forEach((player) => {
       player.currentBet = 0;
     });
 
-    if (
-      gameStatus.value === GAME_TYPE.REVEAL &&
-      currentBetToMatch.value === 0
-    ) {
-      return;
-    } else {
-      nextStep();
-    }
+    lastAggressorIndex.value = null;
+    actedPlayers.value = new Set();
 
-    // console.log("Раунд ставок окончен. Переход к следующему шагу.");
-    // bettingState.value = BET_GAME_TYPE.ENDING;
-    //
-    // // Все деньги из currentBet переводятся в pot в момент ставки, тут мы просто обнуляем их для следующего раунда ставок
-    // players.players.forEach((player) => {
-    //   player.currentBet = 0;
-    // });
-    //
-    // currentBetToMatch.value = 0;
-    // raisesInRound.value = 0;
-    //
-    // nextStep();
+    nextStep();
   };
 
   /**
@@ -474,7 +397,7 @@ export const useGameStore = defineStore("game", () => {
       gameStatus.value = GAME_TYPE.FINISHED;
       table.revealedCount = 5;
       determineWinner();
-    } else if ((table.revealedCount = 5)) {
+    } else if (table.revealedCount === 5) {
       determineWinner();
     } else {
       gameStatus.value = GAME_TYPE.FINISHED;
@@ -564,8 +487,15 @@ export const useGameStore = defineStore("game", () => {
     player.currentBet += amount;
     pot.value += amount;
 
-    currentBetToMatch.value = newBet;
+    currentBetToMatch.value = Math.max(
+      currentBetToMatch.value,
+      player.currentBet,
+    );
     raisesInRound.value++;
+
+    lastAggressorIndex.value = currentPlayerIndex.value;
+    actedPlayers.value = new Set([player.id]);
+    proceed();
   };
 
   return {
