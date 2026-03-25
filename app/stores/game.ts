@@ -15,31 +15,6 @@ export const useGameStore = defineStore("game", () => {
   // Старт игры
   const startGame = () => {
     gameStatus.value = GAME_TYPE.DEAL;
-    deck.initDeck();
-    deck.shuffle();
-    players.initPlayers();
-    players.delCards();
-    table.initTable();
-
-    bettingState.value = BET_GAME_TYPE.BETTING;
-    currentPlayerIndex.value = 0;
-    currentBetToMatch.value = 0;
-    pot.value = 0;
-    raisesInRound.value = 0;
-    lastAggressorIndex.value = null;
-    actedPlayers.value = new Set();
-
-    for (const player of players.players) {
-      player.currentBet = 0;
-      player.folded = false;
-    }
-
-    gameStatus.value = GAME_TYPE.REVEAL;
-    console.log(gameStatus.value);
-  };
-
-  const startNewRound = async () => {
-    gameStatus.value = GAME_TYPE.DEAL;
 
     winnerId.value = null;
 
@@ -58,11 +33,45 @@ export const useGameStore = defineStore("game", () => {
     for (const player of players.players) {
       player.currentBet = 0;
       player.folded = false;
-      player.cards = [];
     }
+
+    deck.initDeck();
+    deck.shuffle();
+    players.initPlayers();
+    players.delCards();
+    table.initTable();
 
     gameStatus.value = GAME_TYPE.REVEAL;
     console.log(gameStatus.value);
+  };
+
+  const startNewRound = async () => {
+    gameStatus.value = GAME_TYPE.DEAL;
+    winnerId.value = null;
+
+    deck.cards = [];
+    table.tableCards = [];
+    table.revealedCount = 0;
+
+    for (const player of players.players) {
+      player.currentBet = 0;
+      player.folded = false;
+      player.cards = [];
+
+      if (player.money === 0) {
+        player.folded = true;
+      }
+    }
+
+    bettingState.value = BET_GAME_TYPE.BETTING;
+    currentPlayerIndex.value = getNextActivePlayerIndex();
+    currentBetToMatch.value = 0;
+    pot.value = 0;
+    raisesInRound.value = 0;
+    lastAggressorIndex.value = null;
+    actedPlayers.value = new Set();
+
+    gameStatus.value = GAME_TYPE.REVEAL;
 
     deck.initDeck();
     deck.shuffle();
@@ -77,17 +86,18 @@ export const useGameStore = defineStore("game", () => {
   const checkForEndOfBettingRound = () => {
     const activePlayers = players.players.filter((p) => !p.folded);
 
+    const allMatched = activePlayers.every(
+      (player) =>
+        player.currentBet === currentBetToMatch.value || player.money === 0,
+    );
+
     // Если остался только один активный игрок (все остальные сфолдили), раунд ставок немедленно заканчивается.
-    if (activePlayers.length <= 1) {
+    if (activePlayers.length <= 1 && allMatched) {
       endRound();
       return true;
     }
 
     // Проверяем, все ли активные игроки либо уравняли ставку, либо находятся в олл-ине (денег 0 при меньшей ставке).
-    const allMatched = activePlayers.every(
-      (player) =>
-        player.currentBet === currentBetToMatch.value || player.money === 0,
-    );
 
     const allActed = activePlayers.every(
       (p) => actedPlayers.value.has(p.id) || p.money === 0,
@@ -97,11 +107,6 @@ export const useGameStore = defineStore("game", () => {
       endRound();
       return true;
     }
-
-    // Также проверяем, что текущий игрок, которому передали ход, не является тем, кто сделал последнюю ставку.
-    // const isBackToLastBetter =
-    //   lastAggressorIndex.value !== null &&
-    //   lastAggressorIndex.value === currentPlayerIndex.value;
 
     // если был рейз — ждем возврата к агрессору
     if (currentBetToMatch.value > 0 && allMatched) {
@@ -187,6 +192,13 @@ export const useGameStore = defineStore("game", () => {
 
     console.log(winnerId.value, "Winner");
     gameStatus.value = GAME_TYPE.FINISHED;
+
+    const activePlayers = players.players.filter((p) => p.money !== 0);
+    console.log(activePlayers);
+
+    if (activePlayers.length <= 1) {
+      return endGame();
+    }
 
     await sleep(4000);
     await startNewRound();
@@ -498,6 +510,48 @@ export const useGameStore = defineStore("game", () => {
     proceed();
   };
 
+  const STORAGE_KEY = "poker-game";
+
+  watch(
+    () => ({
+      players: players.players,
+      tableCards: table.tableCards,
+      revealedCount: table.revealedCount,
+      deck: deck.cards,
+      winnerId: winnerId.value,
+      gameStatus: gameStatus.value,
+      pot: pot.value,
+      currentPlayerIndex: currentPlayerIndex.value,
+      currentBetToMatch: currentBetToMatch.value,
+      lastAggressorIndex: lastAggressorIndex.value,
+    }),
+    (state) => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    },
+    { deep: true },
+  );
+
+  const loadGame = () => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+
+    const state = JSON.parse(saved);
+
+    players.players = state.players;
+    table.tableCards = state.tableCards;
+    table.revealedCount = state.revealedCount;
+    deck.cards = state.deck;
+
+    winnerId.value = state.winnerId;
+    gameStatus.value = state.gameStatus;
+    pot.value = state.pot;
+    currentPlayerIndex.value = state.currentPlayerIndex;
+    currentBetToMatch.value = state.currentBetToMatch;
+    lastAggressorIndex.value = state.lastAggressorIndex;
+
+    actedPlayers.value = new Set();
+  };
+
   return {
     startGame,
     determineWinner,
@@ -519,5 +573,7 @@ export const useGameStore = defineStore("game", () => {
     currentPlayerIndex,
     gameStatus,
     startNewRound,
+
+    loadGame,
   };
 });
