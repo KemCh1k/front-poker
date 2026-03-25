@@ -24,31 +24,46 @@
 
 <script setup lang="ts">
 import { useTableStore } from "~/stores/table";
+const isMobile = ref(false);
 
 const table = useTableStore();
 const game = useGameStore();
 const bgImgSrc = "/img/cards/card-alt.png";
+
+onMounted(() => {
+  isMobile.value = window.innerWidth < 768;
+});
 </script>
 
 <style scoped>
 .poker__game {
-  @apply self-stretch inline-flex justify-end items-center gap-24 pr-10;
+  @apply self-stretch flex items-center h-full pr-4;
+  @apply flex-row justify-end gap-24;
+  @apply md:flex-row;
+  @apply max-md:justify-evenly max-md:gap-2 max-md:px-2 max-md:overflow-x-auto;
 }
 
 .poker__table {
-  @apply self-stretch inline-flex items-center gap-2 justify-between;
+  @apply flex items-center;
+  @apply gap-2 justify-between;
+  @apply max-md:flex-nowrap max-md:gap-1;
 }
 
 .poker__tablePot {
-  @apply bg-[--main-color] text-[--secondery] text-2xl font-bold p-4 rounded-2xl;
+  @apply bg-[--main-color] text-[--secondery] font-bold rounded-2xl;
+  @apply text-2xl p-4;
+  @apply max-md:text-sm max-md:px-2 max-md:py-1 max-md:rounded-xl whitespace-nowrap;
 }
 
 .table__cards {
-  @apply w-44 rounded-2xl shadow-lg;
+  @apply rounded-2xl shadow-lg;
+  @apply w-44;
+  @apply max-md:w-16 max-md:rounded-xl max-md:shadow-md;
 }
 
 .card-wrapper {
   @apply w-44 h-[238px];
+  @apply max-md:w-16 max-md:h-[90px];
   perspective: 900px;
 }
 

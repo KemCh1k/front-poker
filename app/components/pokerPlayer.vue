@@ -1,33 +1,39 @@
 <template>
   <div class="pokerPlayer" v-if="playerOwner">
-    <div class="poker__playerCards">
-      <div v-for="card in playerOwner.cards" :key="card.userId">
-        <img class="player__cards" :src="card.imgSrc" :alt="`${card.value}`" />
-      </div>
-    </div>
-    <div class="player__avatarAmount">
-      <div
-        class="player__avatar"
-        :class="[
-          ownerIndex === game.currentPlayerIndex && !playerOwner.folded
-            ? 'active-player'
-            : '',
-        ]"
-      >
-        {{ playerOwner.id }}
-      </div>
-      <div class="player__state">
-        <div class="player__money">
-          {{ playerOwner.money }}
+    <div class="pokerPlayer__header">
+      <div class="poker__playerCards">
+        <div v-for="card in playerOwner.cards" :key="card.userId">
+          <img
+            class="player__cards"
+            :src="card.imgSrc"
+            :alt="`${card.value}`"
+          />
         </div>
+      </div>
+      <div class="player__avatarAmount">
         <div
+          class="player__avatar"
           :class="[
-            playerOwner.currentBet !== 0
-              ? `player__bet--active`
-              : 'player__bet',
+            ownerIndex === game.currentPlayerIndex && !playerOwner.folded
+              ? 'active-player'
+              : '',
           ]"
         >
-          {{ playerOwner.currentBet }}
+          {{ playerOwner.id }}
+        </div>
+        <div class="player__state">
+          <div class="player__money">
+            {{ playerOwner.money }}
+          </div>
+          <div
+            :class="[
+              playerOwner.currentBet !== 0
+                ? `player__bet--active`
+                : 'player__bet',
+            ]"
+          >
+            {{ playerOwner.currentBet }}
+          </div>
         </div>
       </div>
     </div>
@@ -39,10 +45,10 @@
       <button class="preset-btn" @click="game.applyBetPreset('MEDIUM')">
         100
       </button>
-      <button class="preset-btn" @click="game.applyBetPreset('BIG')">
-        200
-      </button>
-      <button class="preset-btn" @click="game.applyBetPreset('HALF')">½</button>
+      <!--      <button class="preset-btn" @click="game.applyBetPreset('BIG')">-->
+      <!--        200-->
+      <!--      </button>-->
+      <!--      <button class="preset-btn" @click="game.applyBetPreset('HALF')">½</button>-->
       <button class="preset-btn" @click="game.applyBetPreset('MAX')">
         ALL-IN
       </button>
@@ -60,7 +66,6 @@ import { usePlayerStore } from "~/stores/players";
 import { useGameStore } from "~/stores/game";
 
 const players = usePlayerStore();
-const table = useTableStore();
 const game = useGameStore();
 
 const playerOwner = computed(() =>
@@ -74,14 +79,14 @@ const ownerIndex = computed(() =>
 
 <style scoped>
 .pokerPlayer {
-  @apply inline-flex justify-start items-end gap-6;
+  @apply md:inline-flex justify-start items-end gap-6 inline-grid;
 }
 .poker__playerCards {
   @apply inline-flex justify-start items-end gap-2;
 }
 
 .player__cards {
-  @apply gap-2 w-44;
+  @apply gap-2 w-full min-h-20 max-h-28 min-w-16;
 }
 
 .player__avatarAmount {
@@ -89,7 +94,7 @@ const ownerIndex = computed(() =>
 }
 
 .player__avatar {
-  @apply w-28 h-28 rounded-2xl bg-[--secondery];
+  @apply md:w-28 md:h-28 w-20 h-20 rounded-2xl bg-[--secondery];
 }
 
 .player__state {
@@ -101,14 +106,14 @@ const ownerIndex = computed(() =>
 }
 
 .player__bet {
-  @apply text-center text-[--secondery-text] justify-start text-base font-normal opacity-0;
+  @apply text-center text-[--secondery-text] justify-start text-base font-normal h-full opacity-0;
   &--active {
     @apply text-center flex justify-center items-center text-[--main-text] text-base font-normal rounded-full  min-w-8 min-h-8 bg-[--secondery];
   }
 }
 
 .bet__buttons {
-  @apply grid grid-cols-4 gap-2 bg-[--main-color] p-4 rounded-2xl;
+  @apply grid grid-cols-3 gap-2 bg-[--main-color] p-4 rounded-2xl;
 }
 
 .preset-btn {
@@ -117,5 +122,9 @@ const ownerIndex = computed(() =>
 
 .active-player {
   @apply ring-1 ring-[--CTA] rounded-2xl transition-all scale-105;
+}
+
+.pokerPlayer__header {
+  @apply inline-flex justify-center items-center gap-6 h-full;
 }
 </style>
