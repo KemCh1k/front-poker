@@ -27,6 +27,6 @@ onMounted(() => {
 }
 
 .poker--bg {
-  @apply absolute w-full h-dvh top-0 bg-[#00000094] z-10 backdrop-blur-lg items-center;
+  @apply absolute w-full h-dvh top-0 bg-[--backgound] z-10 backdrop-blur-lg items-center;
 }
 </style>

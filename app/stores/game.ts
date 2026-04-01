@@ -108,7 +108,6 @@ export const useGameStore = defineStore("game", () => {
       return true;
     }
 
-    // если был рейз — ждем возврата к агрессору
     if (currentBetToMatch.value > 0 && allMatched) {
       endBettingRound();
       return true;

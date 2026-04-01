@@ -39,31 +39,21 @@
     </div>
     <div class="bet__buttons">
       <!- Пресеты ставок -->
-      <button class="preset-btn" @click="game.applyBetPreset('SMALL')">
-        50
-      </button>
-      <button class="preset-btn" @click="game.applyBetPreset('MEDIUM')">
-        100
-      </button>
-      <!--      <button class="preset-btn" @click="game.applyBetPreset('BIG')">-->
-      <!--        200-->
-      <!--      </button>-->
-      <!--      <button class="preset-btn" @click="game.applyBetPreset('HALF')">½</button>-->
-      <button class="preset-btn" @click="game.applyBetPreset('MAX')">
-        ALL-IN
-      </button>
-      <button class="preset-btn" @click="game.fold()">fold</button>
-      <button class="preset-btn" @click="game.call()">call</button>
-      <button class="preset-btn" @click="game.check()">check</button>
+      <ui-button value="50" @click="game.applyBetPreset('SMALL')" />
+      <ui-button value="100" @click="game.applyBetPreset('MEDIUM')" />
+      <ui-button value="ALL-IN" @click="game.applyBetPreset('MAX')" />
+      <ui-button value="fold" @click="game.fold()" />
+      <ui-button value="call" @click="game.call()" />
+      <ui-button value="check" @click="game.check()" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { useTableStore } from "~/stores/table";
 import { usePlayerStore } from "~/stores/players";
 import { useGameStore } from "~/stores/game";
+import UiButton from "~/components/ui/ui-button.vue";
 
 const players = usePlayerStore();
 const game = useGameStore();
