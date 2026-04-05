@@ -1,5 +1,6 @@
 <template>
   <div class="poker">
+    <ui-burger-menu v-model:showMenu="showMenu" />
     <div v-if="game.gameStatus === GAME_TYPE.FINISHEDROUND" class="poker--bg">
       <modal-poker />
     </div>
@@ -14,10 +15,14 @@ import { onMounted } from "vue";
 import { useGameStore } from "~/stores/game";
 import { GAME_TYPE } from "~/data/game";
 import ModalPoker from "~/components/modal/modal-poker.vue";
+import UiBurgerMenu from "~/components/ui/ui-burgerMenu.vue";
+
+const showMenu = ref(false);
 
 const game = useGameStore();
 onMounted(() => {
   game.loadGame();
+  game.botTurn();
 });
 </script>
 

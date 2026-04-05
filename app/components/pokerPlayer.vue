@@ -1,6 +1,11 @@
 <template>
   <div class="pokerPlayer" v-if="playerOwner">
-    <div class="pokerPlayer__header">
+    <div
+      :class="[
+        'pokerPlayer__header',
+        playerOwner.folded ? 'pokerPlayer__header-fold' : '',
+      ]"
+    >
       <div class="poker__playerCards">
         <div v-for="card in playerOwner.cards" :key="card.userId">
           <img
@@ -19,7 +24,11 @@
               : '',
           ]"
         >
-          {{ playerOwner.id }}
+          <img
+            class="w-full h-full"
+            :src="playerOwner.imgSrc"
+            :alt="playerOwner.imgSrc"
+          />
         </div>
         <div class="player__state">
           <div class="player__money">
@@ -39,12 +48,24 @@
     </div>
     <div class="bet__buttons">
       <!- Пресеты ставок -->
-      <ui-button value="50" @click="game.applyBetPreset('SMALL')" />
-      <ui-button value="100" @click="game.applyBetPreset('MEDIUM')" />
-      <ui-button value="ALL-IN" @click="game.applyBetPreset('MAX')" />
-      <ui-button value="fold" @click="game.fold()" />
-      <ui-button value="call" @click="game.call()" />
-      <ui-button value="check" @click="game.check()" />
+      <ui-button
+        :disabled="!canBet"
+        value="50"
+        @click="game.applyBetPreset('SMALL')"
+      />
+      <ui-button
+        :disabled="!canBet"
+        value="100"
+        @click="game.applyBetPreset('MEDIUM')"
+      />
+      <ui-button
+        :disabled="!canBet"
+        value="ALL-IN"
+        @click="game.applyBetPreset('MAX')"
+      />
+      <ui-button :disabled="!isMyTurn" value="fold" @click="game.fold()" />
+      <ui-button :disabled="!canCall" value="call" @click="game.call()" />
+      <ui-button :disabled="!canCheck" value="check" @click="game.check()" />
     </div>
   </div>
 </template>
@@ -54,6 +75,19 @@ import { computed } from "vue";
 import { usePlayerStore } from "~/stores/players";
 import { useGameStore } from "~/stores/game";
 import UiButton from "~/components/ui/ui-button.vue";
+
+const isMyTurn = computed(() => {
+  return ownerIndex.value === game.currentPlayerIndex;
+});
+
+const toCall = computed(() => {
+  if (!playerOwner.value) return 0;
+  return game.currentBetToMatch;
+});
+
+const canCall = computed(() => isMyTurn.value && toCall.value > 0);
+const canCheck = computed(() => isMyTurn.value && toCall.value === 0);
+const canBet = computed(() => isMyTurn.value && playerOwner.value!.money > 0);
 
 const players = usePlayerStore();
 const game = useGameStore();
@@ -114,6 +148,9 @@ const ownerIndex = computed(() =>
   @apply ring-1 ring-[--CTA] rounded-2xl transition-all scale-105;
 }
 
+.pokerPlayer__header-fold {
+  @apply opacity-10;
+}
 .pokerPlayer__header {
   @apply inline-flex justify-center items-center gap-6 h-full;
 }
