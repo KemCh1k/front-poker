@@ -3,11 +3,13 @@ import { useDeckStore } from "~/stores/deck";
 import { usePlayerStore } from "~/stores/players";
 import { useTableStore } from "~/stores/table";
 import { BET_GAME_TYPE, GAME_TYPE } from "~/data/game";
+import { useBotLogicStore } from "~/stores/botLogic";
 
 export const useGameStore = defineStore("game", () => {
   const deck = useDeckStore();
   const players = usePlayerStore();
   const table = useTableStore();
+  const botLogic = useBotLogicStore();
 
   const gameStatus = ref<GAME_TYPE>(GAME_TYPE.INIT);
   const lastAggressorIndex = ref<number | null>(null);
@@ -77,6 +79,7 @@ export const useGameStore = defineStore("game", () => {
     deck.shuffle();
     players.delCards();
     table.initTable();
+    botTurn();
   };
 
   /**
@@ -154,6 +157,7 @@ export const useGameStore = defineStore("game", () => {
       currentBetToMatch.value = 0;
       lastAggressorIndex.value = null;
       actedPlayers.value = new Set();
+      botTurn();
     } else {
       endRound();
     }
@@ -193,7 +197,6 @@ export const useGameStore = defineStore("game", () => {
     gameStatus.value = GAME_TYPE.FINISHED;
 
     const activePlayers = players.players.filter((p) => p.money !== 0);
-    console.log(activePlayers);
 
     if (activePlayers.length <= 1) {
       return endGame();
@@ -220,6 +223,7 @@ export const useGameStore = defineStore("game", () => {
     table.tableCards = [];
     table.revealedCount = 0;
     startGame();
+    botTurn();
   };
 
   // Ставки
@@ -310,7 +314,7 @@ export const useGameStore = defineStore("game", () => {
 
     const diff = currentBetToMatch.value - player.currentBet;
 
-    if (diff <= 0) return; // Игрок уже уравнял или поставил больше (что невозможно при колл)
+    if (diff <= 0) return; // Игрок уже уравнял или поставил больше (что невозможно при call)
 
     const amountToCall = Math.min(diff, player.money);
 
@@ -351,7 +355,6 @@ export const useGameStore = defineStore("game", () => {
 
     for (let i = 0; i < totalPlayers; i++) {
       nextIndex = (nextIndex + 1) % totalPlayers;
-      console.log(nextIndex);
 
       const p = players.players[nextIndex];
       if (!p) continue;
@@ -368,12 +371,14 @@ export const useGameStore = defineStore("game", () => {
         !alreadyActed
       ) {
         currentPlayerIndex.value = nextIndex;
+        botTurn();
         return;
       }
     }
     console.log("nextPlayer", nextIndex);
 
     endBettingRound();
+    botTurn();
   };
 
   /**
@@ -403,7 +408,6 @@ export const useGameStore = defineStore("game", () => {
    */
   const endRound = async () => {
     const activePlayers = players.players.filter((p) => !p.folded);
-    console.log(activePlayers);
     if (activePlayers.every((p) => p.money === 0)) {
       gameStatus.value = GAME_TYPE.FINISHED;
       table.revealedCount = 5;
@@ -415,7 +419,6 @@ export const useGameStore = defineStore("game", () => {
       table.revealedCount = 5;
       determineWinner();
     }
-    console.log(gameStatus.value);
   };
 
   function sleep(ms: number) {
@@ -551,6 +554,24 @@ export const useGameStore = defineStore("game", () => {
     actedPlayers.value = new Set();
   };
 
+  let isBotRunning = false;
+
+  const botTurn = async () => {
+    if (isBotRunning) return;
+
+    const player = players.players[currentPlayerIndex.value];
+    if (!player || !player.isBot || player.folded || player.money === 0) return;
+
+    isBotRunning = true;
+    await sleep(1000);
+
+    isBotRunning = false;
+    if (player.isBot) {
+      botLogic.runBotAction(player);
+    }
+    console.log(player.isBot, player.id);
+  };
+
   return {
     startGame,
     determineWinner,
@@ -570,9 +591,11 @@ export const useGameStore = defineStore("game", () => {
     applyBetPreset,
     raiseByPreset,
     currentPlayerIndex,
+    currentBetToMatch,
     gameStatus,
     startNewRound,
 
+    botTurn,
     loadGame,
   };
 });

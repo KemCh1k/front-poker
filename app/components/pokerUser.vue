@@ -5,7 +5,12 @@
       v-for="player in otherPlayers"
       :key="player.id"
     >
-      <div class="user__avatarCards">
+      <div
+        :class="[
+          'user__avatarCards',
+          player.folded ? `user__avatarCards-fold` : '',
+        ]"
+      >
         <div
           class="user__avatar"
           :class="[
@@ -15,7 +20,11 @@
             player.id === game.winnerId ? `userWinner` : ``,
           ]"
         >
-          {{ player.id }}
+          <img
+            class="w-full h-full"
+            :src="player.imgSrc"
+            :alt="player.imgSrc"
+          />
         </div>
         <div v-if="!isMobile" v-for="card in player.cards" :key="card.userId">
           <img
@@ -69,6 +78,11 @@ const isCardVisible = (player: any) => {
 .user__avatarCards {
   @apply self-stretch inline-flex justify-start items-start gap-2;
 }
+
+.user__avatarCards-fold {
+  @apply opacity-10;
+}
+
 .user__avatar {
   @apply md:w-20 md:h-20 w-16 h-16 md:rounded-2xl rounded-xl bg-[--secondery] aspect-square;
 }

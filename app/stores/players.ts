@@ -11,6 +11,8 @@ export const usePlayerStore = defineStore("players", () => {
   const initPlayers = () => {
     players.value = Array.from({ length: 5 }, (_, i) => ({
       id: i + 1,
+      imgSrc: `/img/avatars/avatars-${i + 1}.png`,
+      isBot: i !== 0,
       cards: [],
       folded: false,
       money: 1000,

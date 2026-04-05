@@ -7,11 +7,10 @@
 <script setup lang="ts">
 interface Props {
   disabled?: boolean;
-  value?: string;
+  value?: string | null;
 }
 withDefaults(defineProps<Props>(), {
-  value: "preset",
-  variant: "primary",
+  value: null,
 });
 </script>
 <style scoped>
